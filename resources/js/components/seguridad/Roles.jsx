@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, Plus, Search, Edit, Trash2, Eye, X, CheckCircle, Lock } from 'lucide-react';
+import { RolesServicio } from '../../services/api';
 
 const GestionRolesView = () => {
   const [showModal, setShowModal] = useState(false);
@@ -7,34 +8,9 @@ const GestionRolesView = () => {
   const [selectedRol, setSelectedRol] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [roles, setRoles] = useState([
-    { 
-      id: 1, 
-      name: 'admin', 
-      guard_name: 'web',
-      usuarios: 1,
-      permisos: ['crear_horario', 'gest_profesores', 'gest_cursos', 'gest_salones', 'gest_usuarios', 'gest_roles', 'admin.access', 'security.access'],
-      created_at: '2025-10-11'
-    },
-    { 
-      id: 2, 
-      name: 'profesor', 
-      guard_name: 'web',
-      usuarios: 15,
-      permisos: [],
-      created_at: '2025-10-11'
-    },
-    { 
-      id: 3, 
-      name: 'coordinador', 
-      guard_name: 'web',
-      usuarios: 3,
-      permisos: ['crear_horario', 'gest_profesores', 'gest_cursos', 'gest_salones', 'admin.access'],
-      created_at: '2025-10-11'
-    }
-  ]);
+  const [roles, setRoles] = useState([]);
 
-  const permisosDisponibles = [
+  const [permisosDisponibles, setPermisosDisponibles] = useState([
     { id: 1, name: 'crear_horario', descripcion: 'Crear y editar horarios', categoria: 'Horarios' },
     { id: 2, name: 'gest_profesores', descripcion: 'Gestionar profesores', categoria: 'Administración' },
     { id: 3, name: 'gest_cursos', descripcion: 'Gestionar cursos', categoria: 'Administración' },
@@ -43,7 +19,26 @@ const GestionRolesView = () => {
     { id: 6, name: 'gest_roles', descripcion: 'Gestionar roles y permisos', categoria: 'Seguridad' },
     { id: 7, name: 'admin.access', descripcion: 'Acceso a sección Administración', categoria: 'General' },
     { id: 8, name: 'security.access', descripcion: 'Acceso a sección Seguridad', categoria: 'General' },
-  ];
+  ]);
+
+  const loadPermissions = async () => {
+    try {
+      const resp = await RolesServicio.getPermissions();
+      if (resp && resp.success) {
+        const apiPerms = resp.data || [];
+        // Merge preserving existing descriptions/categories when names match
+        const existingByName = (permisosDisponibles || []).reduce((acc, p) => { acc[p.name] = p; return acc; }, {});
+        const merged = apiPerms.map((p, idx) => {
+          if (existingByName[p.name]) return { ...existingByName[p.name], id: p.id };
+          return { id: p.id, name: p.name, descripcion: '', categoria: 'General' };
+        });
+        setPermisosDisponibles(merged);
+      }
+    } catch (err) {
+      console.error('Error cargando permisos:', err);
+    }
+  };
+
 
   const [formData, setFormData] = useState({
     name: '',
@@ -75,36 +70,68 @@ const GestionRolesView = () => {
     setSelectedRol(null);
   };
 
-  const handleSubmit = () => {
-    if (modalMode === 'create') {
-      const newRol = {
-        id: roles.length + 1,
-        name: formData.name,
-        guard_name: formData.guard_name,
-        usuarios: 0,
-        permisos: formData.permisos,
-        created_at: new Date().toISOString().split('T')[0]
-      };
-      setRoles([...roles, newRol]);
-      alert('Rol creado exitosamente');
-    } else if (modalMode === 'edit') {
-      setRoles(roles.map(r => 
-        r.id === selectedRol.id ? { ...r, name: formData.name, permisos: formData.permisos } : r
-      ));
-      alert('Rol actualizado exitosamente');
+  const loadRoles = async () => {
+    try {
+      const resp = await RolesServicio.getAll();
+      if (resp && resp.success) {
+        setRoles(resp.data || []);
+      }
+    } catch (err) {
+      console.error('Error cargando roles:', err);
     }
-    handleCloseModal();
   };
 
-  const handleDelete = (id) => {
+  useEffect(() => {
+    loadRoles();
+    loadPermissions();
+  }, []);
+
+  const handleSubmit = async () => {
+    try {
+      if (modalMode === 'create') {
+        const resp = await RolesServicio.create({ name: formData.name, permisos: formData.permisos });
+        if (resp && resp.status === 'success') {
+          await loadRoles();
+          alert('Rol creado exitosamente');
+        } else {
+          alert(resp.message || 'Error al crear rol');
+        }
+      } else if (modalMode === 'edit') {
+        const resp = await RolesServicio.update(selectedRol.id, { name: formData.name, permisos: formData.permisos });
+        if (resp && resp.status === 'success') {
+          await loadRoles();
+          alert('Rol actualizado exitosamente');
+        } else {
+          alert(resp.message || 'Error al actualizar rol');
+        }
+      }
+      handleCloseModal();
+    } catch (err) {
+      console.error('Error guardando rol:', err);
+      alert('Error al guardar rol');
+    }
+  };
+
+  const handleDelete = async (id) => {
     const rol = roles.find(r => r.id === id);
+    if (!rol) return;
     if (rol.usuarios > 0) {
       alert(`No se puede eliminar el rol "${rol.name}" porque tiene ${rol.usuarios} usuario(s) asignado(s)`);
       return;
     }
-    if (window.confirm(`¿Estás seguro de eliminar el rol "${rol.name}"?`)) {
-      setRoles(roles.filter(r => r.id !== id));
-      alert('Rol eliminado exitosamente');
+    if (!window.confirm(`¿Estás seguro de eliminar el rol "${rol.name}"?`)) return;
+
+    try {
+      const resp = await RolesServicio.delete(id);
+      if (resp && resp.status === 'success') {
+        await loadRoles();
+        alert('Rol eliminado exitosamente');
+      } else {
+        alert(resp.message || 'Error al eliminar rol');
+      }
+    } catch (err) {
+      console.error('Error eliminando rol:', err);
+      alert('Error al eliminar rol');
     }
   };
 
@@ -135,7 +162,7 @@ const GestionRolesView = () => {
   }, {});
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-6 text-gray-800">
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>

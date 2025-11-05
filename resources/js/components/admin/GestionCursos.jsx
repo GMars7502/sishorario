@@ -159,7 +159,7 @@ const GestionCursosView = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-6 text-gray-800">
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>

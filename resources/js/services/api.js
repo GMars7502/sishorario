@@ -4,27 +4,27 @@ const baseURL = '/api';
 
 export const RolesServicio = {
     getAll: async () => {
-        const response = await axios.get(`${baseURL}/profesores`);
+        const response = await axios.get(`${baseURL}/roles`);
         return response.data;
     },
 
-    getById: async (id) => {
-        const response = await axios.get(`${baseURL}/profesores/${id}`);
+    getPermissions: async () => {
+        const response = await axios.get(`${baseURL}/roles/permissions`);
         return response.data;
     },
 
-    create: async (profesorData) => {
-        const response = await axios.post(`${baseURL}/profesores`, profesorData);
+    create: async (rolData) => {
+        const response = await axios.post(`${baseURL}/roles`, rolData);
         return response.data;
     },
 
-    update: async (id, profesorData) => {
-        const response = await axios.put(`${baseURL}/profesores/${id}`, profesorData);
+    update: async (id, rolData) => {
+        const response = await axios.put(`${baseURL}/roles/${id}`, rolData);
         return response.data;
     },
 
     delete: async (id) => {
-        const response = await axios.delete(`${baseURL}/profesores/${id}`);
+        const response = await axios.delete(`${baseURL}/roles/${id}`);
         return response.data;
     }
 };

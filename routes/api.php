@@ -8,6 +8,7 @@ use App\Http\Controllers\ProfesorController;
 use App\Http\Controllers\SalonController;
 use App\Http\Controllers\CursoController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\RoleController;
 use App\Models\Curso;
 
 
@@ -70,6 +71,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Salones disponibles (forma consumida por el front)
     Route::get('/salones-disponibles', [SalonController::class, 'disponibles']);
+
+    // Rutas para la gestión de roles y permisos
+    Route::prefix('roles')->group(function () {
+        Route::get('/', [RoleController::class, 'index']);
+        Route::get('/permissions', [RoleController::class, 'permissions']);
+        Route::post('/', [RoleController::class, 'store']);
+        Route::put('/{id}', [RoleController::class, 'update']);
+        Route::delete('/{id}', [RoleController::class, 'destroy']);
+    });
 });
 
 // Cursos por ciclo para el front
