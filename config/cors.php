@@ -23,7 +23,8 @@ return [
         'http://localhost:5173',  // Dominio/Puerto de Vite (típico)
         'http://127.0.0.1:5173', // Alternativa de localhost
         'http://localhost',       // Si accedes directamente a Laravel
-        'http://127.0.0.1',       // Si accedes directamente a Laravel
+        'http://127.0.0.1',
+        'https://sishorario-production.up.railway.app'       // Si accedes directamente a Laravel
     ],
 
     'allowed_origins_patterns' => [],
